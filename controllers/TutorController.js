@@ -100,7 +100,12 @@ class TutorController {
 
     async findAll(req, res) {
         try {
-            const tutores = await Tutor.findAll();
+            const tutores = await Tutor.findAll({
+                include: [{
+                    model: Aula,
+                    attributes: ['data', 'tipo', 'status']
+                }]
+            });
             res.status(200).json(tutores);
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -109,7 +114,12 @@ class TutorController {
 
     async findOne(req, res) {
         try {
-            const tutor = await Tutor.findByPk(req.params.id);
+            const tutor = await Tutor.findByPk(req.params.id, {
+                include: [{
+                    model: Aula,
+                    attributes: ['data', 'tipo', 'status']
+                }]
+            });
             if (!tutor) {
                 return res.status(404).json({ message: 'Tutor não encontrado' });
             }
@@ -140,6 +150,34 @@ class TutorController {
             }
             await tutor.destroy();
             res.status(204).send();
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async getDisponibilidade(req, res) {
+        try {
+            const { id } = req.params;
+            const { data } = req.query;
+            
+            const aulas = await Aula.findAll({
+                where: {
+                    TutorId: id,
+                    data: new Date(data),
+                    status: 'AGENDADA'
+                }
+            });
+
+            const horariosOcupados = aulas.map(aula => ({
+                inicio: aula.data,
+                fim: new Date(new Date(aula.data).getTime() + 60*60*1000) // 1 hora após
+            }));
+
+            res.status(200).json({
+                tutorId: id,
+                data: data,
+                horariosOcupados
+            });
         } catch (error) {
             res.status(500).json({ error: error.message });
         }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 import {
   Container,
   Table,
@@ -12,496 +13,256 @@ import {
   Card,
   Alert
 } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+const API_URL = 'http://localhost:5000/api';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('alunos');
+  // Estados
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [activeTab, setActiveTab] = useState('login');
   const [alunos, setAlunos] = useState([]);
   const [tutores, setTutores] = useState([]);
   const [aulas, setAulas] = useState([]);
   const [message, setMessage] = useState('');
-  const [formAluno, setFormAluno] = useState({
-    nome: '',
-    email: '',
-    statusAprovacao: false
-  });
-  const [formTutor, setFormTutor] = useState({
-    nome: '',
-    especialidade: ''
-  });
-  const [formAula, setFormAula] = useState({
-    data: '',
+  const [error, setError] = useState('');
+
+  // Forms
+  const [loginForm, setLoginForm] = useState({ email: '', senha: '' });
+  const [registerForm, setRegisterForm] = useState({ nome: '', email: '', senha: '' });
+  const [aulaForm, setAulaForm] = useState({
+    data: new Date(),
     tipo: 'TEORICA',
-    alunoId: '',
-    tutorId: '',
+    tutorId: ''
   });
-  const [editing, setEditing] = useState(null);
 
-  // Buscar dados
+  // Configuração do Axios
+  axios.defaults.baseURL = API_URL;
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Efeitos
   useEffect(() => {
-    fetchAlunos();
-    fetchTutores();
-    fetchAulas();
-  }, []);
+    if (token) {
+      fetchData();
+    }
+  }, [token]);
 
-  const fetchAlunos = async () => {
+  // Funções auxiliares
+  const fetchData = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/alunos');
-      setAlunos(response.data);
-    } catch (error) {
-      setMessage('Erro ao carregar alunos: ' + error.message);
+      const [alunosRes, tutoresRes, aulasRes] = await Promise.all([
+        axios.get('/alunos'),
+        axios.get('/tutores'),
+        axios.get('/aulas')
+      ]);
+
+      setAlunos(alunosRes.data);
+      setTutores(tutoresRes.data);
+      setAulas(aulasRes.data);
+    } catch (err) {
+      setError('Erro ao carregar dados');
     }
   };
 
-  const fetchTutores = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/tutores');
-      setTutores(response.data);
-    } catch (error) {
-      setMessage('Erro ao carregar tutores: ' + error.message);
-    }
-  };
-
-  const fetchAulas = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/aulas');
-      setAulas(response.data);
-    } catch (error) {
-      setMessage('Erro ao carregar aulas: ' + error.message);
-    }
-  };
-
-  // Funções para Alunos
-  const handleSubmitAluno = async (e) => {
+  // Handlers de autenticação
+  const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      if (editing) {
-        await axios.put(`http://localhost:5000/api/alunos/${editing}`, formAluno);
-      } else {
-        await axios.post('http://localhost:5000/api/alunos', formAluno);
-      }
-      setFormAluno({ nome: '', email: '', statusAprovacao: false });
-      setEditing(null);
-      fetchAlunos();
-      setMessage('Aluno ' + (editing ? 'atualizado' : 'cadastrado') + ' com sucesso!');
-    } catch (error) {
-      setMessage('Erro ao ' + (editing ? 'atualizar' : 'cadastrar') + ' aluno: ' + error.message);
+      const res = await axios.post('/alunos/login', loginForm);
+      setToken(res.data.token);
+      localStorage.setItem('token', res.data.token);
+      setActiveTab('aulas');
+    } catch (err) {
+      setError('Erro no login');
     }
   };
 
-  const deleteAluno = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este aluno?')) {
-      try {
-        await axios.delete(`http://localhost:5000/api/alunos/${id}`);
-        fetchAlunos();
-        setMessage('Aluno excluído com sucesso!');
-      } catch (error) {
-        setMessage('Erro ao excluir aluno: ' + error.message);
-      }
-    }
-  };
-
-  // Funções para Tutores
-  const handleSubmitTutor = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      if (editing) {
-        await axios.put(`http://localhost:5000/api/tutores/${editing}`, formTutor);
-      } else {
-        await axios.post('http://localhost:5000/api/tutores', formTutor);
-      }
-      setFormTutor({ nome: '', especialidade: '' });
-      setEditing(null);
-      fetchTutores();
-      setMessage('Tutor ' + (editing ? 'atualizado' : 'cadastrado') + ' com sucesso!');
-    } catch (error) {
-      setMessage('Erro ao ' + (editing ? 'atualizar' : 'cadastrar') + ' tutor: ' + error.message);
+      await axios.post('/alunos/register', registerForm);
+      setMessage('Registro realizado com sucesso!');
+      setActiveTab('login');
+    } catch (err) {
+      setError('Erro no registro');
     }
   };
 
-  const deleteTutor = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este tutor?')) {
-      try {
-        await axios.delete(`http://localhost:5000/api/tutores/${id}`);
-        fetchTutores();
-        setMessage('Tutor excluído com sucesso!');
-      } catch (error) {
-        setMessage('Erro ao excluir tutor: ' + error.message);
-      }
-    }
+  const handleLogout = () => {
+    setToken(null);
+    localStorage.removeItem('token');
+    setActiveTab('login');
   };
 
-  // Função para agendar aula
-  const handleSubmitAula = async (e) => {
+  // Handler de agendamento
+  const handleAgendarAula = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`http://localhost:5000/api/alunos/${formAula.alunoId}/agendar-aula`, {
-        data: formAula.data,
-        tipo: formAula.tipo,
-        tutorId: formAula.tutorId
-      });
-      setFormAula({ data: '', tipo: 'TEORICA', alunoId: '', tutorId: '' });
-      fetchAulas();
+      await axios.post('/aulas', aulaForm);
       setMessage('Aula agendada com sucesso!');
-    } catch (error) {
-      setMessage('Erro ao agendar aula: ' + error.message);
+      fetchData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erro ao agendar aula');
     }
   };
 
+  // Renderização condicional de formulários
+  const renderLoginForm = () => (
+    <Form onSubmit={handleLogin}>
+      <Form.Group>
+        <Form.Label>Email</Form.Label>
+        <Form.Control
+          type="email"
+          value={loginForm.email}
+          onChange={e => setLoginForm({...loginForm, email: e.target.value})}
+        />
+      </Form.Group>
+      <Form.Group>
+        <Form.Label>Senha</Form.Label>
+        <Form.Control
+          type="password"
+          value={loginForm.senha}
+          onChange={e => setLoginForm({...loginForm, senha: e.target.value})}
+        />
+      </Form.Group>
+      <Button type="submit" className="mt-3">Login</Button>
+    </Form>
+  );
+
+  const renderRegisterForm = () => (
+    <Form onSubmit={handleRegister}>
+      <Form.Group>
+        <Form.Label>Nome</Form.Label>
+        <Form.Control
+          type="text"
+          value={registerForm.nome}
+          onChange={e => setRegisterForm({...registerForm, nome: e.target.value})}
+        />
+      </Form.Group>
+      <Form.Group>
+        <Form.Label>Email</Form.Label>
+        <Form.Control
+          type="email"
+          value={registerForm.email}
+          onChange={e => setRegisterForm({...registerForm, email: e.target.value})}
+        />
+      </Form.Group>
+      <Form.Group>
+        <Form.Label>Senha</Form.Label>
+        <Form.Control
+          type="password"
+          value={registerForm.senha}
+          onChange={e => setRegisterForm({...registerForm, senha: e.target.value})}
+        />
+      </Form.Group>
+      <Button type="submit" className="mt-3">Registrar</Button>
+    </Form>
+  );
+
+  const renderAgendarAulaForm = () => (
+    <Form onSubmit={handleAgendarAula}>
+      <Form.Group>
+        <Form.Label>Data</Form.Label>
+        <DatePicker
+          selected={aulaForm.data}
+          onChange={date => setAulaForm({...aulaForm, data: date})}
+          showTimeSelect
+          dateFormat="Pp"
+          className="form-control"
+        />
+      </Form.Group>
+      <Form.Group>
+        <Form.Label>Tipo</Form.Label>
+        <Form.Control
+          as="select"
+          value={aulaForm.tipo}
+          onChange={e => setAulaForm({...aulaForm, tipo: e.target.value})}
+        >
+          <option value="TEORICA">Teórica</option>
+          <option value="PRATICA">Prática</option>
+        </Form.Control>
+      </Form.Group>
+      <Form.Group>
+        <Form.Label>Tutor</Form.Label>
+        <Form.Control
+          as="select"
+          value={aulaForm.tutorId}
+          onChange={e => setAulaForm({...aulaForm, tutorId: e.target.value})}
+        >
+          <option value="">Selecione um tutor...</option>
+          {tutores.map(tutor => (
+            <option key={tutor.id} value={tutor.id}>
+              {tutor.nome} - {tutor.especialidade}
+            </option>
+          ))}
+        </Form.Control>
+      </Form.Group>
+      <Button type="submit" className="mt-3">Agendar Aula</Button>
+    </Form>
+  );
+
+  // Renderização principal
   return (
     <Container className="py-4">
-      <h1 className="text-center mb-4">Sistema de Gestão de Auto Escola</h1>
-      
-      {message && (
-        <Alert variant={message.includes('Erro') ? 'danger' : 'success'} onClose={() => setMessage('')} dismissible>
-          {message}
-        </Alert>
-      )}
-
-      <Nav variant="tabs" className="mb-4">
-        <Nav.Item>
-          <Nav.Link 
-            active={activeTab === 'alunos'} 
-            onClick={() => setActiveTab('alunos')}
-          >
-            Alunos
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link 
-            active={activeTab === 'tutores'} 
-            onClick={() => setActiveTab('tutores')}
-          >
-            Tutores
-          </Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link 
-            active={activeTab === 'aulas'} 
-            onClick={() => setActiveTab('aulas')}
-          >
-            Aulas
-          </Nav.Link>
-        </Nav.Item>
-      </Nav>
-
-      {activeTab === 'alunos' ? (
-        <>
-          <Card className="mb-4">
-            <Card.Body>
-              <Card.Title>{editing ? 'Editar Aluno' : 'Cadastrar Novo Aluno'}</Card.Title>
-              <Form onSubmit={handleSubmitAluno}>
-                <Row>
-                  <Col md={5}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Nome</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={formAluno.nome}
-                        onChange={(e) => setFormAluno({...formAluno, nome: e.target.value})}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={5}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Email</Form.Label>
-                      <Form.Control
-                        type="email"
-                        value={formAluno.email}
-                        onChange={(e) => setFormAluno({...formAluno, email: e.target.value})}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={2}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Status</Form.Label>
-                      <Form.Check
-                        type="checkbox"
-                        label="Aprovado"
-                        checked={formAluno.statusAprovacao}
-                        onChange={(e) => setFormAluno({...formAluno, statusAprovacao: e.target.checked})}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Button type="submit" variant="primary">
-                  {editing ? 'Atualizar' : 'Cadastrar'}
-                </Button>
-                {editing && (
-                  <Button variant="secondary" className="ms-2" onClick={() => {
-                    setEditing(null);
-                    setFormAluno({ nome: '', email: '', statusAprovacao: false });
-                  }}>
-                    Cancelar
-                  </Button>
-                )}
-              </Form>
-            </Card.Body>
-          </Card>
-
-          <Table striped bordered hover>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {alunos.map(aluno => (
-                <tr key={aluno.id}>
-                  <td>{aluno.id}</td>
-                  <td>{aluno.nome}</td>
-                  <td>{aluno.email}</td>
-                  <td>{aluno.statusAprovacao ? 'Aprovado' : 'Pendente'}</td>
-                  <td>
-                    <Button
-                      variant="warning"
-                      size="sm"
-                      className="me-2"
-                      onClick={() => {
-                        setFormAluno(aluno);
-                        setEditing(aluno.id);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => deleteAluno(aluno.id)}
-                    >
-                      Excluir
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </>
-      ) : activeTab === 'tutores' ? (
-        <>
-          <Card className="mb-4">
-            <Card.Body>
-              <Card.Title>{editing ? 'Editar Tutor' : 'Cadastrar Novo Tutor'}</Card.Title>
-              <Form onSubmit={handleSubmitTutor}>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Nome</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={formTutor.nome}
-                        onChange={(e) => setFormTutor({...formTutor, nome: e.target.value})}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Especialidade</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={formTutor.especialidade}
-                        onChange={(e) => setFormTutor({...formTutor, especialidade: e.target.value})}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Button type="submit" variant="primary">
-                  {editing ? 'Atualizar' : 'Cadastrar'}
-                </Button>
-                {editing && (
-                  <Button variant="secondary" className="ms-2" onClick={() => {
-                    setEditing(null);
-                    setFormTutor({ nome: '', especialidade: '' });
-                  }}>
-                    Cancelar
-                  </Button>
-                )}
-              </Form>
-            </Card.Body>
-          </Card>
-
-          <Table striped bordered hover>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Especialidade</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tutores.map(tutor => (
-                <tr key={tutor.id}>
-                  <td>{tutor.id}</td>
-                  <td>{tutor.nome}</td>
-                  <td>{tutor.especialidade}</td>
-                  <td>
-                    <Button
-                      variant="warning"
-                      size="sm"
-                      className="me-2"
-                      onClick={() => {
-                        setFormTutor(tutor);
-                        setEditing(tutor.id);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => deleteTutor(tutor.id)}
-                    >
-                      Excluir
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </>
+      {!token ? (
+        <Card>
+          <Card.Body>
+            <Nav variant="tabs" activeKey={activeTab} onSelect={setActiveTab}>
+              <Nav.Item>
+                <Nav.Link eventKey="login">Login</Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="register">Registro</Nav.Link>
+              </Nav.Item>
+            </Nav>
+            <div className="mt-3">
+              {activeTab === 'login' ? renderLoginForm() : renderRegisterForm()}
+            </div>
+          </Card.Body>
+        </Card>
       ) : (
         <>
-          <Card className="mb-4">
-            <Card.Body>
-              <Card.Title>Agendar Nova Aula</Card.Title>
-              <Form onSubmit={handleSubmitAula}>
-                <Row>
-                  <Col md={3}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Aluno</Form.Label>
-                      <Form.Select
-                        value={formAula.alunoId}
-                        onChange={(e) => setFormAula({...formAula, alunoId: e.target.value})}
-                        required
-                      >
-                        <option value="">Selecione um aluno...</option>
-                        {alunos.map(aluno => (
-                          <option key={aluno.id} value={aluno.id}>{aluno.nome}</option>
-                        ))}
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                  <Col md={3}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Tutor</Form.Label>
-                      <Form.Select
-                        value={formAula.tutorId}
-                        onChange={(e) => setFormAula({...formAula, tutorId: e.target.value})}
-                        required
-                      >
-                        <option value="">Selecione um tutor...</option>
-                        {tutores.map(tutor => (
-                          <option key={tutor.id} value={tutor.id}>{tutor.nome}</option>
-                        ))}
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                  <Col md={3}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Data e Hora</Form.Label>
-                      <Form.Control
-                        type="datetime-local"
-                        value={formAula.data}
-                        onChange={(e) => setFormAula({...formAula, data: e.target.value})}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={3}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Tipo</Form.Label>
-                      <Form.Select
-                        value={formAula.tipo}
-                        onChange={(e) => setFormAula({...formAula, tipo: e.target.value})}
-                        required
-                      >
-                        <option value="TEORICA">Teórica</option>
-                        <option value="PRATICA">Prática</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Button type="submit" variant="primary">
-                  Agendar Aula
-                </Button>
-              </Form>
-            </Card.Body>
-          </Card>
+          <div className="d-flex justify-content-between mb-4">
+            <Nav variant="tabs" activeKey={activeTab} onSelect={setActiveTab}>
+              <Nav.Item>
+                <Nav.Link eventKey="aulas">Minhas Aulas</Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="agendar">Agendar Aula</Nav.Link>
+              </Nav.Item>
+            </Nav>
+            <Button variant="outline-danger" onClick={handleLogout}>Sair</Button>
+          </div>
 
-          <Table striped bordered hover>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Aluno</th>
-                <th>Tutor</th>
-                <th>Data</th>
-                <th>Tipo</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {aulas.map(aula => (
-                <tr key={aula.id}>
-                  <td>{aula.id}</td>
-                  <td>{aula.Aluno?.nome}</td>
-                  <td>{aula.Tutor?.nome}</td>
-                  <td>{new Date(aula.data).toLocaleString()}</td>
-                  <td>{aula.tipo}</td>
-                  <td>{aula.status}</td>
-                  <td>
-                    {aula.status === 'AGENDADA' && (
-                      <>
-                        <Button
-                          variant="success"
-                          size="sm"
-                          className="me-2"
-                          onClick={async () => {
-                            try {
-                              await axios.post(`http://localhost:5000/api/tutores/aulas/${aula.id}/validar`, {
-                                status: 'CONCLUIDA'
-                              });
-                              fetchAulas();
-                              setMessage('Aula concluída com sucesso!');
-                            } catch (error) {
-                              setMessage('Erro ao concluir aula: ' + error.message);
-                            }
-                          }}
-                        >
-                          Concluir
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              await axios.post(`http://localhost:5000/api/tutores/aulas/${aula.id}/validar`, {
-                                status: 'CANCELADA'
-                              });
-                              fetchAulas();
-                              setMessage('Aula cancelada com sucesso!');
-                            } catch (error) {
-                              setMessage('Erro ao cancelar aula: ' + error.message);
-                            }
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                      </>
-                    )}
-                  </td>
+          {message && <Alert variant="success" onClose={() => setMessage('')} dismissible>{message}</Alert>}
+          {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
+
+          {activeTab === 'aulas' ? (
+            <Table striped bordered hover>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Tutor</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {aulas.map(aula => (
+                  <tr key={aula.id}>
+                    <td>{new Date(aula.data).toLocaleString()}</td>
+                    <td>{aula.tipo}</td>
+                    <td>{tutores.find(t => t.id === aula.TutorId)?.nome}</td>
+                    <td>{aula.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          ) : (
+            renderAgendarAulaForm()
+          )}
         </>
       )}
     </Container>

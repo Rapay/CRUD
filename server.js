@@ -16,8 +16,17 @@ app.use('/api/alunos', alunoRoutes);
 app.use('/api/tutores', tutorRoutes);
 app.use('/api/aulas', aulaRoutes);
 
+// Error handling
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ 
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
 // Database sync and server start
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 async function startServer() {
     try {
@@ -29,6 +38,7 @@ async function startServer() {
         });
     } catch (error) {
         console.error('Unable to start server:', error);
+        process.exit(1);
     }
 }
 

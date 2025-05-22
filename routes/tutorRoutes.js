@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const tutorController = require('../controllers/TutorController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Rotas protegidas
+router.use(authMiddleware);
+
+// Consulta de disponibilidade
+router.get('/:id/disponibilidade', tutorController.getDisponibilidade);
 
 // CRUD routes
 router.post('/', tutorController.create);

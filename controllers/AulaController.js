@@ -35,8 +35,8 @@ class AulaController {
         try {
             const aulas = await Aula.findAll({
                 include: [
-                    { model: Aluno, attributes: ['nome'] },
-                    { model: Tutor, attributes: ['nome'] }
+                    { model: Aluno, attributes: ['nome', 'email'] },
+                    { model: Tutor, attributes: ['nome', 'especialidade'] }
                 ]
             });
             res.status(200).json(aulas);
@@ -49,8 +49,8 @@ class AulaController {
         try {
             const aula = await Aula.findByPk(req.params.id, {
                 include: [
-                    { model: Aluno, attributes: ['nome'] },
-                    { model: Tutor, attributes: ['nome'] }
+                    { model: Aluno, attributes: ['nome', 'email'] },
+                    { model: Tutor, attributes: ['nome', 'especialidade'] }
                 ]
             });
             if (!aula) {
@@ -107,6 +107,41 @@ class AulaController {
         } catch (error) {
             res.status(400).json({ error: error.message });
         }
+    }
+
+    async getHorariosDisponiveis(req, res) {
+        try {
+            const { tutorId, data } = req.query;
+            const horarios = await this.gerarHorariosDisponiveis(tutorId, new Date(data));
+            res.status(200).json(horarios);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async gerarHorariosDisponiveis(tutorId, data) {
+        const horarios = [];
+        const horaInicio = 8; // 8:00
+        const horaFim = 18;   // 18:00
+
+        for (let hora = horaInicio; hora < horaFim; hora++) {
+            const horario = new Date(data);
+            horario.setHours(hora, 0, 0, 0);
+
+            const aulaExistente = await Aula.findOne({
+                where: {
+                    TutorId: tutorId,
+                    data: horario,
+                    status: 'AGENDADA'
+                }
+            });
+
+            if (!aulaExistente) {
+                horarios.push(horario);
+            }
+        }
+
+        return horarios;
     }
 }
 

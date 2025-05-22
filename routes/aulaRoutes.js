@@ -1,15 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const aulaController = require('../controllers/AulaController');
+const AulaController = require('../controllers/AulaController');
+const authMiddleware = require('../middleware/authMiddleware');
 
-// CRUD routes
-router.post('/', aulaController.create);
-router.get('/', aulaController.findAll);
-router.get('/:id', aulaController.findOne);
-router.put('/:id', aulaController.update);
-router.delete('/:id', aulaController.delete);
+// Rotas protegidas
+router.use(authMiddleware);
 
-// Status update route
-router.patch('/:id/status', aulaController.updateStatus);
+// Consulta de horários
+router.get('/horarios-disponiveis', AulaController.getHorariosDisponiveis);
+
+// CRUD básico
+router.post('/', AulaController.create);
+router.get('/', AulaController.findAll);
+router.get('/:id', AulaController.findOne);
+router.put('/:id', AulaController.update);
+router.delete('/:id', AulaController.delete);
 
 module.exports = router;
