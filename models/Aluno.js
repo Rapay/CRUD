@@ -30,6 +30,7 @@ const Aluno = sequelize.define('Aluno', {
     }
 }, {
     hooks: {
+        // Hook para criptografar a senha antes de criar o aluno
         beforeCreate: async (aluno) => {
             if (aluno.senha) {
                 const salt = await bcrypt.genSalt(10);

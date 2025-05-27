@@ -53,9 +53,9 @@ function App() {
   const fetchData = async () => {
     try {
       const [alunosRes, tutoresRes, aulasRes] = await Promise.all([
-        axios.get('/alunos'),
-        axios.get('/tutores'),
-        axios.get('/aulas')
+        axios.get('/api/alunos'),
+        axios.get('/api/tutores'),
+        axios.get('/api/aulas')
       ]);
 
       setAlunos(alunosRes.data);
@@ -70,23 +70,30 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('/alunos/login', loginForm);
+      const res = await axios.post('/api/alunos/login', loginForm);
       setToken(res.data.token);
       localStorage.setItem('token', res.data.token);
       setActiveTab('aulas');
+      setError('');
+      console.log('Login bem sucedido:', res.data);
     } catch (err) {
-      setError('Erro no login');
+      console.error('Erro no login:', err);
+      setError(err.response?.data?.mensagem || 'Erro no login. Verifique suas credenciais.');
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('/alunos/register', registerForm);
+      const response = await axios.post('/api/alunos/register', registerForm);
       setMessage('Registro realizado com sucesso!');
       setActiveTab('login');
+      setRegisterForm({ nome: '', email: '', senha: '' });
+      setError('');
+      console.log('Registro bem sucedido:', response.data);
     } catch (err) {
-      setError('Erro no registro');
+      console.error('Erro no registro:', err);
+      setError(err.response?.data?.mensagem || 'Erro no registro. Verifique os dados informados.');
     }
   };
 
@@ -100,7 +107,7 @@ function App() {
   const handleAgendarAula = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('/aulas', aulaForm);
+      await axios.post('/api/aulas', aulaForm);
       setMessage('Aula agendada com sucesso!');
       fetchData();
     } catch (err) {

@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
+// Definição do modelo Tutor
 const Tutor = sequelize.define('Tutor', {
     id: {
         type: DataTypes.INTEGER,

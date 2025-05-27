@@ -6,14 +6,14 @@ const authMiddleware = require('../middleware/authMiddleware');
 // Rotas protegidas
 router.use(authMiddleware);
 
-// Consulta de horários
+// Consulta de horários disponíveis
 router.get('/horarios-disponiveis', AulaController.getHorariosDisponiveis);
 
 // CRUD básico
-router.post('/', AulaController.create);
-router.get('/', AulaController.findAll);
-router.get('/:id', AulaController.findOne);
-router.put('/:id', AulaController.update);
-router.delete('/:id', AulaController.delete);
+router.post('/', AulaController.criar);
+router.get('/', AulaController.listar);
+router.get('/:id', AulaController.buscarPorId);
+router.put('/:id', AulaController.atualizar);
+router.delete('/:id', AulaController.cancelar);
 
 module.exports = router;

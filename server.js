@@ -11,33 +11,43 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// Rota raiz
+app.get('/api', (req, res) => {
+    res.json({ message: 'Bem-vindo à API da Auto Escola' });
+});
+
+// Rotas da API
 app.use('/api/alunos', alunoRoutes);
 app.use('/api/tutores', tutorRoutes);
 app.use('/api/aulas', aulaRoutes);
 
-// Error handling
+// Tratamento de erros
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ 
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        mensagem: 'Erro interno do servidor',
+        erro: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
 
-// Database sync and server start
+// Rota para lidar com rotas não encontradas
+app.use('*', (req, res) => {
+    res.status(404).json({ mensagem: 'Rota não encontrada' });
+});
+
+// Sincronização do banco de dados e inicialização do servidor
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
     try {
         await sequelize.sync();
-        console.log('Database synchronized successfully');
+        console.log('Banco de dados sincronizado com sucesso');
         
         app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
+            console.log(`Servidor rodando na porta ${PORT}`);
         });
     } catch (error) {
-        console.error('Unable to start server:', error);
+        console.error('Não foi possível iniciar o servidor:', error);
         process.exit(1);
     }
 }

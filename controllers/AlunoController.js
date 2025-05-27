@@ -15,19 +15,19 @@ class AlunoController {
             // Validação do aluno
             const aluno = await Aluno.findByPk(alunoId);
             if (!aluno) {
-                return res.status(404).json({ message: 'Aluno não encontrado' });
+                return res.status(404).json({ mensagem: 'Aluno não encontrado' });
             }
 
             // Validação de aprovação teórica
             if (tipo === 'PRATICA' && !aluno.statusAprovacao) {
                 return res.status(400).json({ 
-                    message: 'Aluno precisa ter aprovação teórica para agendar aulas práticas'
+                    mensagem: 'Aluno precisa ter aprovação teórica para agendar aulas práticas'
                 });
             }
 
             const tutor = await Tutor.findByPk(tutorId);
             if (!tutor) {
-                return res.status(404).json({ message: 'Tutor não encontrado' });
+                return res.status(404).json({ mensagem: 'Tutor não encontrado' });
             }
 
             // Verificação de disponibilidade em múltiplas fontes
@@ -42,7 +42,7 @@ class AlunoController {
                 await NotificationService.enviarNotificacaoConflito(aluno, sugestoes);
                 
                 return res.status(400).json({ 
-                    message: 'Horário indisponível',
+                    mensagem: 'Horário indisponível',
                     sugestoes
                 });
             }
@@ -66,12 +66,12 @@ class AlunoController {
             ]);
 
             return res.status(201).json({
-                message: 'Aula agendada com sucesso',
+                mensagem: 'Aula agendada com sucesso',
                 aula
             });
         } catch (error) {
             console.error('Erro ao agendar aula:', error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ erro: error.message });
         }
     }
 
@@ -97,27 +97,75 @@ class AlunoController {
             const aluno = await Aluno.findByPk(alunoId);
             
             if (!aluno) {
-                return res.status(404).json({ message: 'Aluno não encontrado' });
+                return res.status(404).json({ mensagem: 'Aluno não encontrado' });
             }
 
             if (!aluno.statusAprovacao) {
-                return res.status(400).json({ message: 'Aluno ainda não está aprovado para receber o certificado' });
+                return res.status(400).json({ mensagem: 'Aluno ainda não está aprovado para receber o certificado' });
             }
 
-            // Lógica para gerar certificado será implementada posteriormente
-            res.status(200).json({ message: 'Solicitação de certificado realizada com sucesso' });
+            res.status(200).json({ mensagem: 'Solicitação de certificado realizada com sucesso' });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ erro: error.message });
         }
     }
 
-    
+    async listarAulas(req, res) {
+        try {
+            const aulas = await Aula.findAll({
+                where: { AlunoId: req.aluno.id },
+                include: [{ model: Tutor }]
+            });
+            res.json(aulas);
+        } catch (error) {
+            res.status(500).json({ erro: error.message });
+        }
+    }
+
+    async obterSugestoesHorario(req, res) {
+        try {
+            const { tutorId, data } = req.query;
+            const sugestoes = await this.gerarSugestoesHorario(tutorId, new Date(data));
+            res.json(sugestoes);
+        } catch (error) {
+            res.status(500).json({ erro: error.message });
+        }
+    }
+
     async create(req, res) {
         try {
-            const aluno = await Aluno.create(req.body);
-            res.status(201).json(aluno);
+            const { nome, email, senha } = req.body;
+
+            // Validações básicas
+            if (!nome || !email || !senha) {
+                return res.status(400).json({ 
+                    mensagem: 'Nome, email e senha são obrigatórios' 
+                });
+            }
+
+            // Verifica se o email já está em uso
+            const alunoExistente = await Aluno.findOne({ where: { email } });
+            if (alunoExistente) {
+                return res.status(400).json({ 
+                    mensagem: 'Este email já está em uso' 
+                });
+            }
+
+            const aluno = await Aluno.create({ nome, email, senha });
+            
+            // Remove a senha do objeto retornado
+            const { senha: _, ...alunoSemSenha } = aluno.toJSON();
+            
+            res.status(201).json({
+                mensagem: 'Aluno cadastrado com sucesso',
+                aluno: alunoSemSenha
+            });
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            console.error('Erro no registro:', error);
+            res.status(500).json({ 
+                mensagem: 'Erro ao criar aluno',
+                erro: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
         }
     }
 
@@ -134,7 +182,7 @@ class AlunoController {
         try {
             const aluno = await Aluno.findByPk(req.params.id);
             if (!aluno) {
-                return res.status(404).json({ message: 'Aluno não encontrado' });
+                return res.status(404).json({ mensagem: 'Aluno não encontrado' });
             }
             res.status(200).json(aluno);
         } catch (error) {
@@ -146,7 +194,7 @@ class AlunoController {
         try {
             const aluno = await Aluno.findByPk(req.params.id);
             if (!aluno) {
-                return res.status(404).json({ message: 'Aluno não encontrado' });
+                return res.status(404).json({ mensagem: 'Aluno não encontrado' });
             }
             await aluno.update(req.body);
             res.status(200).json(aluno);
@@ -159,7 +207,7 @@ class AlunoController {
         try {
             const aluno = await Aluno.findByPk(req.params.id);
             if (!aluno) {
-                return res.status(404).json({ message: 'Aluno não encontrado' });
+                return res.status(404).json({ mensagem: 'Aluno não encontrado' });
             }
             await aluno.destroy();
             res.status(204).send();
@@ -168,7 +216,7 @@ class AlunoController {
         }
     }
 
-    // Métodos auxiliares novos
+    // Métodos auxiliares
     async verificarDisponibilidadeTutor(tutorId, data) {
         // Implementação da verificação de disponibilidade em tempo real
         const tutor = await Tutor.findByPk(tutorId);
@@ -194,7 +242,6 @@ class AlunoController {
     async adicionarAoGoogleCalendar(aula) {
         try {
             // Implementação da integração com Google Calendar
-            // Aqui você precisaria usar a API do Google Calendar
             console.log('Aula adicionada ao Google Calendar');
         } catch (error) {
             console.error('Erro ao adicionar ao Google Calendar:', error);
@@ -204,26 +251,25 @@ class AlunoController {
     async enviarNotificacoes(aula) {
         try {
             // Implementação do sistema de notificações
-            // Aqui você pode usar um serviço de email ou SMS
             console.log('Notificações enviadas');
         } catch (error) {
             console.error('Erro ao enviar notificações:', error);
         }
     }
 
-    // Novos métodos de autenticação
+    // Métodos de autenticação
     async login(req, res) {
         try {
             const { email, senha } = req.body;
             
             const aluno = await Aluno.findOne({ where: { email } });
             if (!aluno) {
-                return res.status(401).json({ message: 'Credenciais inválidas' });
+                return res.status(401).json({ mensagem: 'Credenciais inválidas' });
             }
 
             const senhaValida = await bcrypt.compare(senha, aluno.senha);
             if (!senhaValida) {
-                return res.status(401).json({ message: 'Credenciais inválidas' });
+                return res.status(401).json({ mensagem: 'Credenciais inválidas' });
             }
 
             const token = jwt.sign(
@@ -242,7 +288,7 @@ class AlunoController {
                 }
             });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ erro: error.message });
         }
     }
 

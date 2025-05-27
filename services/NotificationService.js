@@ -14,6 +14,31 @@ class NotificationService {
         });
     }
 
+    // Envia notificação por email
+    static async enviarNotificacaoEmail(destinatario, assunto, mensagem) {
+        try {
+            // Aqui seria implementada a lógica de envio de email
+            console.log(`Enviando email para ${destinatario}`);
+            console.log(`Assunto: ${assunto}`);
+            console.log(`Mensagem: ${mensagem}`);
+        } catch (error) {
+            console.error('Erro ao enviar notificação:', error);
+            throw error;
+        }
+    }
+
+    // Envia notificação por SMS
+    static async enviarNotificacaoSMS(numeroTelefone, mensagem) {
+        try {
+            // Aqui seria implementada a lógica de envio de SMS
+            console.log(`Enviando SMS para ${numeroTelefone}`);
+            console.log(`Mensagem: ${mensagem}`);
+        } catch (error) {
+            console.error('Erro ao enviar SMS:', error);
+            throw error;
+        }
+    }
+
     async enviarEmailAgendamento(aula, aluno, tutor) {
         try {
             const mailOptions = {

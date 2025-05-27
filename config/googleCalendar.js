@@ -22,7 +22,7 @@ class GoogleCalendarService {
                     timeZone: 'America/Sao_Paulo',
                 },
                 end: {
-                    dateTime: new Date(new Date(aula.data).getTime() + 60*60*1000).toISOString(),
+                    dateTime: new Date(new Date(aula.data).getTime() + 60*60*1000).toISOString(), // 1 hora após
                     timeZone: 'America/Sao_Paulo',
                 },
                 attendees: [
@@ -32,8 +32,8 @@ class GoogleCalendarService {
                 reminders: {
                     useDefault: false,
                     overrides: [
-                        { method: 'email', minutes: 24 * 60 },
-                        { method: 'popup', minutes: 30 }
+                        { method: 'email', minutes: 24 * 60 }, // Lembrete por email 24h antes
+                        { method: 'popup', minutes: 30 } // Notificação popup 30min antes
                     ],
                 },
             };
@@ -55,7 +55,7 @@ class GoogleCalendarService {
             const response = await this.calendar.freebusy.query({
                 resource: {
                     timeMin: new Date(data).toISOString(),
-                    timeMax: new Date(new Date(data).getTime() + 60*60*1000).toISOString(),
+                    timeMax: new Date(new Date(data).getTime() + 60*60*1000).toISOString(), // Próxima hora
                     items: [{ id: 'primary' }, { email: tutorEmail }],
                 },
             });

@@ -5,41 +5,49 @@ const Aula = require('../models/Aula');
 
 async function initializeDatabase() {
     try {
-        // Force sync will drop existing tables and recreate them
+        // Força a sincronização irá deletar as tabelas existentes e recriá-las
         await sequelize.sync({ force: true });
-        console.log('Database tables created successfully');
+        console.log('Tabelas do banco de dados criadas com sucesso');
 
-        // Create some test tutors
+        // Cria alguns tutores para teste
         const tutores = await Tutor.bulkCreate([
             { nome: 'João Silva', especialidade: 'Teoria' },
             { nome: 'Maria Santos', especialidade: 'Prática' }
         ]);
 
-        // Create some test students
+        // Cria alguns alunos para teste
         const alunos = await Aluno.bulkCreate([
-            { nome: 'Pedro Oliveira', email: 'pedro@email.com' },
-            { nome: 'Ana Costa', email: 'ana@email.com' }
+            { 
+                nome: 'Pedro Oliveira', 
+                email: 'pedro@email.com',
+                senha: '123456' 
+            },
+            { 
+                nome: 'Ana Costa', 
+                email: 'ana@email.com',
+                senha: '123456' 
+            }
         ]);
 
-        // Create some test classes
+        // Cria algumas aulas para teste
         await Aula.bulkCreate([
             {
-                data: new Date(2025, 5, 21), // Tomorrow
+                data: new Date(2025, 5, 21),
                 tipo: 'TEORICA',
                 AlunoId: alunos[0].id,
                 TutorId: tutores[0].id
             },
             {
-                data: new Date(2025, 5, 22), // Day after tomorrow
+                data: new Date(2025, 5, 22),
                 tipo: 'PRATICA',
                 AlunoId: alunos[1].id,
                 TutorId: tutores[1].id
             }
         ]);
 
-        console.log('Test data inserted successfully');
+        console.log('Dados de teste inseridos com sucesso');
     } catch (error) {
-        console.error('Error initializing database:', error);
+        console.error('Erro ao inicializar banco de dados:', error);
     } finally {
         await sequelize.close();
     }

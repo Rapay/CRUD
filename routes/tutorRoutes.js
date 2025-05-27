@@ -1,23 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const tutorController = require('../controllers/TutorController');
+const TutorController = require('../controllers/TutorController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Rotas protegidas
 router.use(authMiddleware);
 
 // Consulta de disponibilidade
-router.get('/:id/disponibilidade', tutorController.getDisponibilidade);
+router.get('/:id/disponibilidade', TutorController.getDisponibilidade);
 
-// CRUD routes
-router.post('/', tutorController.create);
-router.get('/', tutorController.findAll);
-router.get('/:id', tutorController.findOne);
-router.put('/:id', tutorController.update);
-router.delete('/:id', tutorController.delete);
+// Rotas CRUD
+router.post('/', TutorController.criar);
+router.get('/', TutorController.listar);
+router.get('/:id', TutorController.buscarPorId);
+router.put('/:id', TutorController.atualizar);
+router.delete('/:id', TutorController.excluir);
 
-// Business logic routes
-router.post('/aulas/:aulaId/validar', tutorController.validarAula);
-router.post('/alunos/:alunoId/emitir-certificado', tutorController.emitirCertificado);
+// Rotas de lógica de negócio
+router.post('/aulas/:aulaId/validar', TutorController.validarAula);
+router.post('/alunos/:alunoId/emitir-certificado', TutorController.emitirCertificado);
 
 module.exports = router;

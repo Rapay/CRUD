@@ -3,7 +3,87 @@ const Aluno = require('../models/Aluno');
 const Aula = require('../models/Aula');
 
 class TutorController {
-    async validarAula(req, res) {
+    // Métodos CRUD
+    static async criar(req, res) {
+        try {
+            const { nome, especialidade } = req.body;
+            const tutor = await Tutor.create({
+                nome,
+                especialidade
+            });
+            res.status(201).json(tutor);
+        } catch (error) {
+            res.status(500).json({ mensagem: 'Erro ao criar tutor' });
+        }
+    }
+
+    static async listar(req, res) {
+        try {
+            const tutores = await Tutor.findAll();
+            res.json(tutores);
+        } catch (error) {
+            res.status(500).json({ mensagem: 'Erro ao listar tutores' });
+        }
+    }
+
+    static async buscarPorId(req, res) {
+        try {
+            const tutor = await Tutor.findByPk(req.params.id);
+            
+            if (!tutor) {
+                return res.status(404).json({ mensagem: 'Tutor não encontrado' });
+            }
+
+            res.json(tutor);
+        } catch (error) {
+            res.status(500).json({ mensagem: 'Erro ao buscar tutor' });
+        }
+    }
+
+    static async atualizar(req, res) {
+        try {
+            const { nome, especialidade } = req.body;
+            const tutor = await Tutor.findByPk(req.params.id);
+
+            if (!tutor) {
+                return res.status(404).json({ mensagem: 'Tutor não encontrado' });
+            }
+
+            await tutor.update({ nome, especialidade });
+            res.json(tutor);
+        } catch (error) {
+            res.status(500).json({ mensagem: 'Erro ao atualizar tutor' });
+        }
+    }
+
+    static async excluir(req, res) {
+        try {
+            const tutor = await Tutor.findByPk(req.params.id);
+
+            if (!tutor) {
+                return res.status(404).json({ mensagem: 'Tutor não encontrado' });
+            }
+
+            // Verifica se o tutor possui aulas agendadas
+            const aulasAgendadas = await Aula.count({
+                where: { TutorId: req.params.id }
+            });
+
+            if (aulasAgendadas > 0) {
+                return res.status(400).json({ 
+                    mensagem: 'Não é possível excluir tutor com aulas agendadas' 
+                });
+            }
+
+            await tutor.destroy();
+            res.json({ mensagem: 'Tutor excluído com sucesso' });
+        } catch (error) {
+            res.status(500).json({ mensagem: 'Erro ao excluir tutor' });
+        }
+    }
+
+    // Métodos de negócio
+    static async validarAula(req, res) {
         try {
             const { aulaId } = req.params;
             const { status } = req.body;
@@ -16,11 +96,11 @@ class TutorController {
             });
             
             if (!aula) {
-                return res.status(404).json({ message: 'Aula não encontrada' });
+                return res.status(404).json({ mensagem: 'Aula não encontrada' });
             }
 
             if (!['CONCLUIDA', 'CANCELADA'].includes(status)) {
-                return res.status(400).json({ message: 'Status inválido para validação' });
+                return res.status(400).json({ mensagem: 'Status inválido para validação' });
             }
 
             // Atualiza o status da aula
@@ -42,26 +122,26 @@ class TutorController {
             }
 
             res.status(200).json({ 
-                message: 'Aula validada com sucesso',
+                mensagem: 'Aula validada com sucesso',
                 aula,
                 alunoAprovado: aula.Aluno.statusAprovacao 
             });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ erro: error.message });
         }
     }
 
-    async emitirCertificado(req, res) {
+    static async emitirCertificado(req, res) {
         try {
             const { alunoId } = req.params;
             const aluno = await Aluno.findByPk(alunoId);
             
             if (!aluno) {
-                return res.status(404).json({ message: 'Aluno não encontrado' });
+                return res.status(404).json({ mensagem: 'Aluno não encontrado' });
             }
 
             if (!aluno.statusAprovacao) {
-                return res.status(400).json({ message: 'Aluno ainda não está aprovado para receber o certificado' });
+                return res.status(400).json({ mensagem: 'Aluno ainda não está aprovado para receber o certificado' });
             }
 
             // Contagem de aulas concluídas
@@ -80,82 +160,15 @@ class TutorController {
             };
 
             res.status(200).json({ 
-                message: 'Certificado emitido com sucesso',
+                mensagem: 'Certificado emitido com sucesso',
                 certificado
             });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ erro: error.message });
         }
     }
 
-    // CRUD operations
-    async create(req, res) {
-        try {
-            const tutor = await Tutor.create(req.body);
-            res.status(201).json(tutor);
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    }
-
-    async findAll(req, res) {
-        try {
-            const tutores = await Tutor.findAll({
-                include: [{
-                    model: Aula,
-                    attributes: ['data', 'tipo', 'status']
-                }]
-            });
-            res.status(200).json(tutores);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    }
-
-    async findOne(req, res) {
-        try {
-            const tutor = await Tutor.findByPk(req.params.id, {
-                include: [{
-                    model: Aula,
-                    attributes: ['data', 'tipo', 'status']
-                }]
-            });
-            if (!tutor) {
-                return res.status(404).json({ message: 'Tutor não encontrado' });
-            }
-            res.status(200).json(tutor);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    }
-
-    async update(req, res) {
-        try {
-            const tutor = await Tutor.findByPk(req.params.id);
-            if (!tutor) {
-                return res.status(404).json({ message: 'Tutor não encontrado' });
-            }
-            await tutor.update(req.body);
-            res.status(200).json(tutor);
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    }
-
-    async delete(req, res) {
-        try {
-            const tutor = await Tutor.findByPk(req.params.id);
-            if (!tutor) {
-                return res.status(404).json({ message: 'Tutor não encontrado' });
-            }
-            await tutor.destroy();
-            res.status(204).send();
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    }
-
-    async getDisponibilidade(req, res) {
+    static async getDisponibilidade(req, res) {
         try {
             const { id } = req.params;
             const { data } = req.query;
@@ -184,4 +197,4 @@ class TutorController {
     }
 }
 
-module.exports = new TutorController();
+module.exports = TutorController;
