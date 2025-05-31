@@ -1,87 +1,92 @@
-# Sistema de Gerenciamento de Auto Escola
+# Sistema de Gerenciamento de Auto-Escola
 
-Um sistema CRUD completo para gerenciamento de auto escola, construído com React, Node.js, Express e PostgreSQL.
+Este projeto é um sistema full-stack para gerenciamento de auto-escolas, permitindo o cadastro de alunos, agendamento de aulas e gerenciamento de instrutores.
 
-## Pré-requisitos
+## Requisitos
 
 - Node.js (v14 ou superior)
-- PostgreSQL
-- npm ou yarn
+- NPM (v6 ou superior)
 
-## Configuração
+## Estrutura do Projeto
 
-1. Clone o repositório
-2. Instale as dependências do backend:
-   ```bash
-   npm install
-   ```
+- `/client` - Frontend React
+- `/config` - Configurações do backend
+- `/controllers` - Controladores da API
+- `/middleware` - Middlewares de autenticação
+- `/models` - Modelos de dados
+- `/routes` - Rotas da API
+- `/scripts` - Scripts de inicialização e utilidades
+- `/services` - Serviços de backend (notificações, etc.)
 
-3. Configure o frontend:
-   ```bash
-   cd client
-   npm install
-   ```
+## Instalação
 
-4. Crie um arquivo `.env` no diretório raiz com as seguintes variáveis:
-   ```
-   DB_NAME=autoescola
-   DB_USER=postgres
-   DB_PASSWORD=postgres
-   DB_HOST=localhost
-   DB_PORT=5432
-   PORT=5000
-   ```
+### Backend (Node.js)
 
-## Executando a Aplicação
+1. Na pasta raiz do projeto, execute:
 
-1. Inicie o servidor backend:
-   ```bash
-   npm run dev
-   ```
+```bash
+# Instalar dependências
+npm install
 
-2. Em um novo terminal, inicie o frontend:
-   ```bash
-   cd client
-   npm start
-   ```
+# Inicializar banco de dados com dados de teste
+npm run init-db
 
-3. Abra seu navegador e acesse `http://localhost:3000`
+# Iniciar servidor
+node start-server.js
+```
 
-## Funcionalidades
+O servidor backend estará disponível em: http://localhost:5000
 
-- Criar, Ler, Atualizar e Excluir alunos e tutores
-- Agendar, validar e cancelar aulas
-- Gerenciar status de aprovação dos alunos
-- Emitir certificados para alunos aprovados
-- Interface moderna com Bootstrap
-- Design responsivo
-- Atualizações em tempo real
-- Tratamento de erros e validações
+### Frontend (React)
 
-## Endpoints da API
+1. Na pasta `/client`, execute:
 
-### Alunos
-- GET /api/alunos - Listar alunos
-- GET /api/alunos/:id - Obter um aluno
-- POST /api/alunos - Criar aluno
-- PUT /api/alunos/:id - Atualizar aluno
-- DELETE /api/alunos/:id - Excluir aluno
-- POST /api/alunos/:alunoId/agendar-aula - Agendar aula
-- POST /api/alunos/:alunoId/solicitar-certificado - Solicitar certificado
+```bash
+# Instalar dependências
+npm install --legacy-peer-deps
 
-### Tutores
-- GET /api/tutores - Listar tutores
-- GET /api/tutores/:id - Obter um tutor
-- POST /api/tutores - Criar tutor
-- PUT /api/tutores/:id - Atualizar tutor
-- DELETE /api/tutores/:id - Excluir tutor
-- POST /api/tutores/aulas/:aulaId/validar - Validar aula
-- POST /api/tutores/alunos/:alunoId/emitir-certificado - Emitir certificado
+# Iniciar aplicação React (modo desenvolvimento)
+node fix-and-start.js
+```
 
-### Aulas
-- GET /api/aulas - Listar aulas
-- GET /api/aulas/:id - Obter uma aula
-- POST /api/aulas - Criar aula
-- PUT /api/aulas/:id - Atualizar aula
-- DELETE /api/aulas/:id - Excluir aula
-- PATCH /api/aulas/:id/status - Atualizar status da aula
+A aplicação React estará disponível em: http://localhost:3000
+
+## Funcionalidades Implementadas
+
+- **Autenticação**
+  - Registro de alunos
+  - Login de alunos
+  - Proteção de rotas autenticadas
+
+- **Gerenciamento de Aulas**
+  - Listagem de aulas agendadas
+  - Agendamento de novas aulas
+  - Cancelamento de aulas
+
+- **Gerenciamento de Instrutores**
+  - Listagem de instrutores disponíveis
+
+## Usuários de Teste
+
+Após inicializar o banco de dados com `npm run init-db`, os seguintes usuários estarão disponíveis:
+
+- **Aluno**: 
+  - Email: `aluno@teste.com`
+  - Senha: `123456`
+
+## Solução de Problemas
+
+### Frontend
+
+Se encontrar problemas ao iniciar o frontend:
+
+1. Execute `node fix-and-start.js` no diretório `/client`
+2. Verifique se o backend está em execução na porta 5000
+
+### Backend
+
+Se encontrar problemas ao iniciar o backend:
+
+1. Verifique se o arquivo `.env` existe e está configurado corretamente
+2. Execute `node start-server.js` para inicializar o servidor com verificações automáticas
+3. Verifique se o banco de dados foi inicializado com `npm run init-db`

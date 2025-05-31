@@ -4,15 +4,16 @@ require('dotenv').config();
 
 // Middleware para verificar o token JWT
 const authMiddleware = async (req, res, next) => {
-    // Obtém o token do cabeçalho da requisição
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
-    // Verifica se o token existe
-    if (!token) {
-        return res.status(401).json({ mensagem: 'Acesso negado. Token não fornecido.' });
-    }
-
     try {
+        // Obtém o token do cabeçalho da requisição
+        const authHeader = req.header('Authorization');
+        const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+
+        // Verifica se o token existe
+        if (!token) {
+            return res.status(401).json({ mensagem: 'Acesso negado. Token não fornecido.' });
+        }
+
         // Verifica se o token é válido
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
@@ -26,7 +27,8 @@ const authMiddleware = async (req, res, next) => {
         req.aluno = aluno;
         next();
     } catch (error) {
-        res.status(400).json({ mensagem: 'Token inválido' });
+        console.error('Erro de autenticação:', error.message);
+        res.status(401).json({ mensagem: 'Token inválido ou expirado' });
     }
 };
 

@@ -38,12 +38,11 @@ class AulaController {
         } catch (error) {
             res.status(500).json({ mensagem: 'Erro ao buscar horários disponíveis' });
         }
-    }
-
-    // Criar nova aula
+    }    // Criar nova aula
     static async criar(req, res) {
         try {
-            const { data, tipo, alunoId, tutorId } = req.body;
+            const { data, tipo, tutorId } = req.body;
+            const alunoId = req.aluno.id; // Obtém o ID do aluno do middleware de autenticação
 
             // Verifica disponibilidade do horário
             const aulaExistente = await Aula.findOne({
@@ -78,14 +77,16 @@ class AulaController {
         } catch (error) {
             res.status(500).json({ mensagem: 'Erro ao criar aula' });
         }
-    }
-
-    // Listar todas as aulas
+    }    // Listar aulas do aluno autenticado
     static async listar(req, res) {
         try {
+            const alunoId = req.aluno.id; // Obtém o ID do aluno do middleware de autenticação
+            
             const aulas = await Aula.findAll({
+                where: {
+                    AlunoId: alunoId
+                },
                 include: [
-                    { model: Aluno },
                     { model: Tutor }
                 ]
             });

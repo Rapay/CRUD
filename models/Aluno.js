@@ -24,6 +24,18 @@ const Aluno = sequelize.define('Aluno', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    telefone: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    endereco: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    dataNascimento: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
     statusAprovacao: {
         type: DataTypes.BOOLEAN,
         defaultValue: false

@@ -130,11 +130,9 @@ class AlunoController {
         } catch (error) {
             res.status(500).json({ erro: error.message });
         }
-    }
-
-    async create(req, res) {
+    }    async create(req, res) {
         try {
-            const { nome, email, senha } = req.body;
+            const { nome, email, senha, telefone, endereco, dataNascimento } = req.body;
 
             // Validações básicas
             if (!nome || !email || !senha) {
@@ -149,15 +147,28 @@ class AlunoController {
                 return res.status(400).json({ 
                     mensagem: 'Este email já está em uso' 
                 });
-            }
-
-            const aluno = await Aluno.create({ nome, email, senha });
+            }            const aluno = await Aluno.create({ 
+                nome, 
+                email, 
+                senha,
+                telefone,
+                endereco,
+                dataNascimento
+            });
+            
+            // Gera o token de autenticação
+            const token = jwt.sign(
+                { id: aluno.id },
+                process.env.JWT_SECRET,
+                { expiresIn: '24h' }
+            );
             
             // Remove a senha do objeto retornado
             const { senha: _, ...alunoSemSenha } = aluno.toJSON();
             
             res.status(201).json({
                 mensagem: 'Aluno cadastrado com sucesso',
+                token,
                 aluno: alunoSemSenha
             });
         } catch (error) {

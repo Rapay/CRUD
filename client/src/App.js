@@ -7,8 +7,6 @@ import {
   Table,
   Button,
   Form,
-  Row,
-  Col,
   Nav,
   Card,
   Alert
@@ -21,7 +19,6 @@ function App() {
   // Estados
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [activeTab, setActiveTab] = useState('login');
-  const [alunos, setAlunos] = useState([]);
   const [tutores, setTutores] = useState([]);
   const [aulas, setAulas] = useState([]);
   const [message, setMessage] = useState('');
@@ -29,7 +26,14 @@ function App() {
 
   // Forms
   const [loginForm, setLoginForm] = useState({ email: '', senha: '' });
-  const [registerForm, setRegisterForm] = useState({ nome: '', email: '', senha: '' });
+  const [registerForm, setRegisterForm] = useState({ 
+    nome: '', 
+    email: '', 
+    senha: '', 
+    telefone: '', 
+    endereco: '',
+    dataNascimento: null 
+  });
   const [aulaForm, setAulaForm] = useState({
     data: new Date(),
     tipo: 'TEORICA',
@@ -41,6 +45,21 @@ function App() {
   if (token) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }
+  
+  // Configurar interceptador para lidar com erros de autenticação
+  axios.interceptors.response.use(
+    response => response,
+    error => {
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        // Token expirado ou inválido, faça logout
+        setToken(null);
+        localStorage.removeItem('token');
+        setActiveTab('login');
+        setError('Sessão expirada. Por favor, faça login novamente.');
+      }
+      return Promise.reject(error);
+    }
+  );
 
   // Efeitos
   useEffect(() => {
@@ -52,13 +71,11 @@ function App() {
   // Funções auxiliares
   const fetchData = async () => {
     try {
-      const [alunosRes, tutoresRes, aulasRes] = await Promise.all([
-        axios.get('/api/alunos'),
-        axios.get('/api/tutores'),
-        axios.get('/api/aulas')
+      const [tutoresRes, aulasRes] = await Promise.all([
+        axios.get('/tutores'),
+        axios.get('/aulas')
       ]);
 
-      setAlunos(alunosRes.data);
       setTutores(tutoresRes.data);
       setAulas(aulasRes.data);
     } catch (err) {
@@ -70,7 +87,7 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('/api/alunos/login', loginForm);
+      const res = await axios.post('/alunos/login', loginForm);
       setToken(res.data.token);
       localStorage.setItem('token', res.data.token);
       setActiveTab('aulas');
@@ -85,10 +102,29 @@ function App() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('/api/alunos/register', registerForm);
-      setMessage('Registro realizado com sucesso!');
-      setActiveTab('login');
-      setRegisterForm({ nome: '', email: '', senha: '' });
+      const response = await axios.post('/alunos/register', registerForm);
+      
+      // Verifica se o servidor retornou um token
+      if (response.data.token) {
+        // Login automático após registro
+        setToken(response.data.token);
+        localStorage.setItem('token', response.data.token);
+        setActiveTab('aulas');
+        setMessage('Registro realizado com sucesso! Você está logado automaticamente.');
+      } else {
+        // Comportamento antigo caso não tenha token (não deve ocorrer após nossas mudanças)
+        setMessage('Registro realizado com sucesso! Por favor, faça login.');
+        setActiveTab('login');
+      }
+      
+      setRegisterForm({ 
+        nome: '', 
+        email: '', 
+        senha: '', 
+        telefone: '', 
+        endereco: '',
+        dataNascimento: null 
+      });
       setError('');
       console.log('Registro bem sucedido:', response.data);
     } catch (err) {
@@ -107,61 +143,124 @@ function App() {
   const handleAgendarAula = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('/api/aulas', aulaForm);
+      // O middleware de autenticação já vai identificar o aluno pelo token
+      await axios.post('/aulas', aulaForm);
       setMessage('Aula agendada com sucesso!');
+      setAulaForm({
+        data: new Date(),
+        tipo: 'TEORICA',
+        tutorId: ''
+      });
       fetchData();
     } catch (err) {
       setError(err.response?.data?.message || 'Erro ao agendar aula');
+    }
+  };
+  
+  const handleCancelarAula = async (aulaId) => {
+    try {
+      await axios.delete(`/aulas/${aulaId}`);
+      setMessage('Aula cancelada com sucesso!');
+      fetchData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erro ao cancelar aula');
     }
   };
 
   // Renderização condicional de formulários
   const renderLoginForm = () => (
     <Form onSubmit={handleLogin}>
-      <Form.Group>
+      <Form.Group className="mb-3">
         <Form.Label>Email</Form.Label>
         <Form.Control
           type="email"
+          placeholder="seu@email.com"
           value={loginForm.email}
           onChange={e => setLoginForm({...loginForm, email: e.target.value})}
+          required
+          autoFocus
         />
       </Form.Group>
-      <Form.Group>
+      <Form.Group className="mb-3">
         <Form.Label>Senha</Form.Label>
         <Form.Control
           type="password"
+          placeholder="Sua senha"
           value={loginForm.senha}
           onChange={e => setLoginForm({...loginForm, senha: e.target.value})}
+          required
         />
+        <Form.Text className="text-muted">
+          Nunca compartilharemos seus dados com terceiros.
+        </Form.Text>
       </Form.Group>
-      <Button type="submit" className="mt-3">Login</Button>
+      <div className="d-grid gap-2">
+        <Button variant="primary" size="lg" type="submit" className="mt-3">
+          Entrar
+        </Button>
+      </div>
     </Form>
   );
 
   const renderRegisterForm = () => (
     <Form onSubmit={handleRegister}>
-      <Form.Group>
-        <Form.Label>Nome</Form.Label>
+      <Form.Group className="mb-3">
+        <Form.Label>Nome Completo</Form.Label>
         <Form.Control
           type="text"
           value={registerForm.nome}
           onChange={e => setRegisterForm({...registerForm, nome: e.target.value})}
+          required
         />
       </Form.Group>
-      <Form.Group>
+      <Form.Group className="mb-3">
         <Form.Label>Email</Form.Label>
         <Form.Control
           type="email"
           value={registerForm.email}
           onChange={e => setRegisterForm({...registerForm, email: e.target.value})}
+          required
         />
       </Form.Group>
-      <Form.Group>
+      <Form.Group className="mb-3">
         <Form.Label>Senha</Form.Label>
         <Form.Control
           type="password"
           value={registerForm.senha}
           onChange={e => setRegisterForm({...registerForm, senha: e.target.value})}
+          required
+        />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>Telefone</Form.Label>
+        <Form.Control
+          type="tel"
+          placeholder="(XX) XXXXX-XXXX"
+          value={registerForm.telefone}
+          onChange={e => setRegisterForm({...registerForm, telefone: e.target.value})}
+        />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>Endereço</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder="Rua, número, bairro, cidade"
+          value={registerForm.endereco}
+          onChange={e => setRegisterForm({...registerForm, endereco: e.target.value})}
+        />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>Data de Nascimento</Form.Label>
+        <DatePicker
+          selected={registerForm.dataNascimento}
+          onChange={date => setRegisterForm({...registerForm, dataNascimento: date})}
+          dateFormat="dd/MM/yyyy"
+          className="form-control"
+          placeholderText="Selecione uma data"
+          maxDate={new Date()}
+          showYearDropdown
+          scrollableYearDropdown
+          yearDropdownItemNumber={100}
         />
       </Form.Group>
       <Button type="submit" className="mt-3">Registrar</Button>
@@ -170,7 +269,7 @@ function App() {
 
   const renderAgendarAulaForm = () => (
     <Form onSubmit={handleAgendarAula}>
-      <Form.Group>
+      <Form.Group className="mb-3">
         <Form.Label>Data</Form.Label>
         <DatePicker
           selected={aulaForm.data}
@@ -180,7 +279,7 @@ function App() {
           className="form-control"
         />
       </Form.Group>
-      <Form.Group>
+      <Form.Group className="mb-3">
         <Form.Label>Tipo</Form.Label>
         <Form.Control
           as="select"
@@ -191,7 +290,7 @@ function App() {
           <option value="PRATICA">Prática</option>
         </Form.Control>
       </Form.Group>
-      <Form.Group>
+      <Form.Group className="mb-3">
         <Form.Label>Tutor</Form.Label>
         <Form.Control
           as="select"
@@ -216,6 +315,9 @@ function App() {
       {!token ? (
         <Card>
           <Card.Body>
+            {message && <Alert variant="success" onClose={() => setMessage('')} dismissible>{message}</Alert>}
+            {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
+            
             <Nav variant="tabs" activeKey={activeTab} onSelect={setActiveTab}>
               <Nav.Item>
                 <Nav.Link eventKey="login">Login</Nav.Link>
@@ -254,6 +356,7 @@ function App() {
                   <th>Tipo</th>
                   <th>Tutor</th>
                   <th>Status</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -263,6 +366,16 @@ function App() {
                     <td>{aula.tipo}</td>
                     <td>{tutores.find(t => t.id === aula.TutorId)?.nome}</td>
                     <td>{aula.status}</td>
+                    <td>
+                      <Button 
+                        variant="outline-danger" 
+                        size="sm"
+                        disabled={aula.status !== 'AGENDADA'}
+                        onClick={() => handleCancelarAula(aula.id)}
+                      >
+                        Cancelar
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
