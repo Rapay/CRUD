@@ -11,7 +11,7 @@ class AlunoController {
         try {
             const { alunoId } = req.params;
             const { data, tipo, tutorId } = req.body;
-            
+
             // Validação do aluno
             const aluno = await Aluno.findByPk(alunoId);
             if (!aluno) {
@@ -20,7 +20,7 @@ class AlunoController {
 
             // Validação de aprovação teórica
             if (tipo === 'PRATICA' && !aluno.statusAprovacao) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     mensagem: 'Aluno precisa ter aprovação teórica para agendar aulas práticas'
                 });
             }
@@ -40,8 +40,8 @@ class AlunoController {
                 // Gerar sugestões de horários alternativos
                 const sugestoes = await this.gerarSugestoesHorario(tutorId, data);
                 await NotificationService.enviarNotificacaoConflito(aluno, sugestoes);
-                
-                return res.status(400).json({ 
+
+                return res.status(400).json({
                     mensagem: 'Horário indisponível',
                     sugestoes
                 });
@@ -78,7 +78,7 @@ class AlunoController {
     async gerarSugestoesHorario(tutorId, dataOriginal) {
         const data = new Date(dataOriginal);
         const sugestoes = [];
-        
+
         // Gera 3 sugestões de horários alternativos
         for (let i = 1; i <= 3; i++) {
             data.setHours(data.getHours() + 1);
@@ -87,7 +87,7 @@ class AlunoController {
                 sugestoes.push(new Date(data));
             }
         }
-        
+
         return sugestoes;
     }
 
@@ -95,7 +95,7 @@ class AlunoController {
         try {
             const { alunoId } = req.params;
             const aluno = await Aluno.findByPk(alunoId);
-            
+
             if (!aluno) {
                 return res.status(404).json({ mensagem: 'Aluno não encontrado' });
             }
@@ -124,48 +124,93 @@ class AlunoController {
 
     async obterSugestoesHorario(req, res) {
         try {
-            const { tutorId, data } = req.query;
-            const sugestoes = await this.gerarSugestoesHorario(tutorId, new Date(data));
+            const { tutorId, data } = req.query;            const sugestoes = await this.gerarSugestoesHorario(tutorId, new Date(data));
             res.json(sugestoes);
         } catch (error) {
             res.status(500).json({ erro: error.message });
         }
-    }    async create(req, res) {
+    }
+    
+    async create(req, res) {
         try {
             const { nome, email, senha, telefone, endereco, dataNascimento } = req.body;
 
-            // Validações básicas
-            if (!nome || !email || !senha) {
-                return res.status(400).json({ 
-                    mensagem: 'Nome, email e senha são obrigatórios' 
+            // Validações básicas com mensagens específicas por campo
+            if (!nome) {
+                return res.status(400).json({
+                    mensagem: 'O nome é obrigatório',
+                    campo: 'nome',
+                    erro: 'Este campo não pode ficar em branco'
+                });
+            }
+            
+            if (!email) {
+                return res.status(400).json({
+                    mensagem: 'O email é obrigatório',
+                    campo: 'email',
+                    erro: 'Este campo não pode ficar em branco'
+                });
+            }
+
+            // Validação do formato do email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (email && !emailRegex.test(email)) {
+                return res.status(400).json({
+                    mensagem: 'Formato de email inválido',
+                    campo: 'email',
+                    erro: 'Por favor, insira um endereço de email válido'
+                });
+            }
+
+            if (!senha) {
+                return res.status(400).json({
+                    mensagem: 'A senha é obrigatória',
+                    campo: 'senha',
+                    erro: 'Este campo não pode ficar em branco'
+                });
+            }
+
+            // Verificação de complexidade da senha
+            if (senha && senha.length < 6) {
+                return res.status(400).json({
+                    mensagem: 'Senha muito curta',
+                    campo: 'senha',
+                    erro: 'A senha deve ter pelo menos 6 caracteres'
                 });
             }
 
             // Verifica se o email já está em uso
             const alunoExistente = await Aluno.findOne({ where: { email } });
             if (alunoExistente) {
-                return res.status(400).json({ 
-                    mensagem: 'Este email já está em uso' 
+                return res.status(400).json({
+                    mensagem: 'Este email já está em uso',
+                    campo: 'email',
+                    erro: 'Este email já está cadastrado no sistema'
                 });
-            }            const aluno = await Aluno.create({ 
-                nome, 
-                email, 
-                senha,
+            } 
+              // Criptografa a senha antes de salvar
+            const salt = await bcrypt.genSalt(10);
+            const senhaHash = await bcrypt.hash(senha, salt);
+            
+            const aluno = await Aluno.create({
+                nome,
+                email,
+                senha: senhaHash,
                 telefone,
                 endereco,
                 dataNascimento
             });
-            
+
             // Gera o token de autenticação
             const token = jwt.sign(
                 { id: aluno.id },
                 process.env.JWT_SECRET,
                 { expiresIn: '24h' }
             );
-            
+
             // Remove a senha do objeto retornado
             const { senha: _, ...alunoSemSenha } = aluno.toJSON();
-            
+
             res.status(201).json({
                 mensagem: 'Aluno cadastrado com sucesso',
                 token,
@@ -173,7 +218,7 @@ class AlunoController {
             });
         } catch (error) {
             console.error('Erro no registro:', error);
-            res.status(500).json({ 
+            res.status(500).json({
                 mensagem: 'Erro ao criar aluno',
                 erro: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
@@ -272,15 +317,25 @@ class AlunoController {
     async login(req, res) {
         try {
             const { email, senha } = req.body;
-            
+
+            // Validação do email - verificar se o email existe
             const aluno = await Aluno.findOne({ where: { email } });
             if (!aluno) {
-                return res.status(401).json({ mensagem: 'Credenciais inválidas' });
+                return res.status(401).json({ 
+                    mensagem: 'Email não encontrado',
+                    campo: 'email',
+                    erro: 'Email não está cadastrado no sistema'
+                });
             }
 
+            // Validação da senha
             const senhaValida = await bcrypt.compare(senha, aluno.senha);
             if (!senhaValida) {
-                return res.status(401).json({ mensagem: 'Credenciais inválidas' });
+                return res.status(401).json({ 
+                    mensagem: 'Senha incorreta',
+                    campo: 'senha',
+                    erro: 'A senha fornecida não corresponde à conta'
+                });
             }
 
             const token = jwt.sign(

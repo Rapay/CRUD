@@ -82,26 +82,66 @@ function App() {
       setError('Erro ao carregar dados');
     }
   };
+  // Estados para erros de campos específicos
+  const [fieldErrors, setFieldErrors] = useState({ email: '', senha: '' });
+  
+  // Estados para erros nos campos de registro
+  const [registerFieldErrors, setRegisterFieldErrors] = useState({
+    nome: '',
+    email: '',
+    senha: '',
+    telefone: '',
+    endereco: '',
+    dataNascimento: ''
+  });
 
   // Handlers de autenticação
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
+      // Limpar erros anteriores
+      setError('');
+      setFieldErrors({ email: '', senha: '' });
+
       const res = await axios.post('/alunos/login', loginForm);
       setToken(res.data.token);
       localStorage.setItem('token', res.data.token);
       setActiveTab('aulas');
-      setError('');
       console.log('Login bem sucedido:', res.data);
     } catch (err) {
       console.error('Erro no login:', err);
-      setError(err.response?.data?.mensagem || 'Erro no login. Verifique suas credenciais.');
+      
+      // Verifica se há informações específicas sobre o campo com erro
+      if (err.response?.data) {
+        const { mensagem, campo, erro } = err.response.data;
+        
+        // Exibe o erro geral
+        setError(mensagem || 'Erro no login. Verifique suas credenciais.');
+        
+        // Se o erro está associado a um campo específico, exibe-o no campo correspondente
+        if (campo) {
+          setFieldErrors(prev => ({ ...prev, [campo]: erro }));
+        }
+      } else {
+        setError('Erro ao conectar com o servidor. Tente novamente.');
+      }
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
+      // Limpar erros anteriores
+      setError('');
+      setRegisterFieldErrors({
+        nome: '',
+        email: '',
+        senha: '',
+        telefone: '',
+        endereco: '',
+        dataNascimento: ''
+      });
+
       const response = await axios.post('/alunos/register', registerForm);
       
       // Verifica se o servidor retornou um token
@@ -112,7 +152,7 @@ function App() {
         setActiveTab('aulas');
         setMessage('Registro realizado com sucesso! Você está logado automaticamente.');
       } else {
-        // Comportamento antigo caso não tenha token (não deve ocorrer após nossas mudanças)
+        // Caso contrário, mostra mensagem e redireciona para login
         setMessage('Registro realizado com sucesso! Por favor, faça login.');
         setActiveTab('login');
       }
@@ -126,10 +166,23 @@ function App() {
         dataNascimento: null 
       });
       setError('');
-      console.log('Registro bem sucedido:', response.data);
     } catch (err) {
       console.error('Erro no registro:', err);
-      setError(err.response?.data?.mensagem || 'Erro no registro. Verifique os dados informados.');
+      
+      // Verifica se há informações específicas sobre o campo com erro
+      if (err.response?.data) {
+        const { mensagem, campo, erro } = err.response.data;
+        
+        // Exibe o erro geral
+        setError(mensagem || 'Erro no registro. Tente novamente.');
+        
+        // Se o erro está associado a um campo específico, exibe-o no campo correspondente
+        if (campo) {
+          setRegisterFieldErrors(prev => ({ ...prev, [campo]: erro }));
+        }
+      } else {
+        setError('Erro ao conectar com o servidor. Tente novamente.');
+      }
     }
   };
 
@@ -176,10 +229,18 @@ function App() {
           type="email"
           placeholder="seu@email.com"
           value={loginForm.email}
-          onChange={e => setLoginForm({...loginForm, email: e.target.value})}
+          onChange={e => {
+            setLoginForm({...loginForm, email: e.target.value});
+            // Limpa mensagem de erro quando o usuário começa a digitar
+            if (fieldErrors.email) setFieldErrors(prev => ({...prev, email: ''}));
+          }}
           required
           autoFocus
+          isInvalid={!!fieldErrors.email}
         />
+        <Form.Control.Feedback type="invalid">
+          {fieldErrors.email}
+        </Form.Control.Feedback>
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>Senha</Form.Label>
@@ -187,9 +248,17 @@ function App() {
           type="password"
           placeholder="Sua senha"
           value={loginForm.senha}
-          onChange={e => setLoginForm({...loginForm, senha: e.target.value})}
+          onChange={e => {
+            setLoginForm({...loginForm, senha: e.target.value});
+            // Limpa mensagem de erro quando o usuário começa a digitar
+            if (fieldErrors.senha) setFieldErrors(prev => ({...prev, senha: ''}));
+          }}
           required
+          isInvalid={!!fieldErrors.senha}
         />
+        <Form.Control.Feedback type="invalid">
+          {fieldErrors.senha}
+        </Form.Control.Feedback>
         <Form.Text className="text-muted">
           Nunca compartilharemos seus dados com terceiros.
         </Form.Text>
@@ -209,27 +278,49 @@ function App() {
         <Form.Control
           type="text"
           value={registerForm.nome}
-          onChange={e => setRegisterForm({...registerForm, nome: e.target.value})}
+          onChange={e => {
+            setRegisterForm({...registerForm, nome: e.target.value});
+            // Limpar erro quando o usuário começa a digitar
+            if (registerFieldErrors.nome) setRegisterFieldErrors(prev => ({...prev, nome: ''}));
+          }}
           required
+          isInvalid={!!registerFieldErrors.nome}
         />
+        <Form.Control.Feedback type="invalid">
+          {registerFieldErrors.nome}
+        </Form.Control.Feedback>
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>Email</Form.Label>
         <Form.Control
           type="email"
           value={registerForm.email}
-          onChange={e => setRegisterForm({...registerForm, email: e.target.value})}
+          onChange={e => {
+            setRegisterForm({...registerForm, email: e.target.value});
+            if (registerFieldErrors.email) setRegisterFieldErrors(prev => ({...prev, email: ''}));
+          }}
           required
+          isInvalid={!!registerFieldErrors.email}
         />
+        <Form.Control.Feedback type="invalid">
+          {registerFieldErrors.email}
+        </Form.Control.Feedback>
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>Senha</Form.Label>
         <Form.Control
           type="password"
           value={registerForm.senha}
-          onChange={e => setRegisterForm({...registerForm, senha: e.target.value})}
+          onChange={e => {
+            setRegisterForm({...registerForm, senha: e.target.value});
+            if (registerFieldErrors.senha) setRegisterFieldErrors(prev => ({...prev, senha: ''}));
+          }}
           required
+          isInvalid={!!registerFieldErrors.senha}
         />
+        <Form.Control.Feedback type="invalid">
+          {registerFieldErrors.senha}
+        </Form.Control.Feedback>
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>Telefone</Form.Label>
@@ -237,8 +328,15 @@ function App() {
           type="tel"
           placeholder="(XX) XXXXX-XXXX"
           value={registerForm.telefone}
-          onChange={e => setRegisterForm({...registerForm, telefone: e.target.value})}
+          onChange={e => {
+            setRegisterForm({...registerForm, telefone: e.target.value});
+            if (registerFieldErrors.telefone) setRegisterFieldErrors(prev => ({...prev, telefone: ''}));
+          }}
+          isInvalid={!!registerFieldErrors.telefone}
         />
+        <Form.Control.Feedback type="invalid">
+          {registerFieldErrors.telefone}
+        </Form.Control.Feedback>
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>Endereço</Form.Label>
@@ -246,22 +344,37 @@ function App() {
           type="text"
           placeholder="Rua, número, bairro, cidade"
           value={registerForm.endereco}
-          onChange={e => setRegisterForm({...registerForm, endereco: e.target.value})}
+          onChange={e => {
+            setRegisterForm({...registerForm, endereco: e.target.value});
+            if (registerFieldErrors.endereco) setRegisterFieldErrors(prev => ({...prev, endereco: ''}));
+          }}
+          isInvalid={!!registerFieldErrors.endereco}
         />
+        <Form.Control.Feedback type="invalid">
+          {registerFieldErrors.endereco}
+        </Form.Control.Feedback>
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>Data de Nascimento</Form.Label>
         <DatePicker
           selected={registerForm.dataNascimento}
-          onChange={date => setRegisterForm({...registerForm, dataNascimento: date})}
+          onChange={date => {
+            setRegisterForm({...registerForm, dataNascimento: date});
+            if (registerFieldErrors.dataNascimento) setRegisterFieldErrors(prev => ({...prev, dataNascimento: ''}));
+          }}
           dateFormat="dd/MM/yyyy"
-          className="form-control"
+          className={`form-control ${registerFieldErrors.dataNascimento ? 'is-invalid' : ''}`}
           placeholderText="Selecione uma data"
           maxDate={new Date()}
           showYearDropdown
           scrollableYearDropdown
           yearDropdownItemNumber={100}
         />
+        {registerFieldErrors.dataNascimento && (
+          <div className="invalid-feedback" style={{ display: 'block' }}>
+            {registerFieldErrors.dataNascimento}
+          </div>
+        )}
       </Form.Group>
       <Button type="submit" className="mt-3">Registrar</Button>
     </Form>
